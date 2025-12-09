@@ -1,13 +1,15 @@
 ﻿using TMPro;
 using UnityEngine;
+
 public enum PlantState
 {
-    Seed,       
-    Sprout,     
-    Young,      
-    Adult,      
-    Dead        
+    Seed,
+    Sprout,
+    Young,
+    Adult,
+    Dead
 }
+
 public class PlantGrowthManager : MonoBehaviour
 {
     [Header("Estados de la Planta")]
@@ -23,7 +25,6 @@ public class PlantGrowthManager : MonoBehaviour
     public float growthSpeed = 1f;
     private float growthTimer = 0f;
 
-
     [Header("Referencias visuales")]
     public GameObject seedModel;
     public GameObject sproutModel;
@@ -38,104 +39,70 @@ public class PlantGrowthManager : MonoBehaviour
     public Color deadColor = Color.black;
 
     [Header("Consumo y Evaporación")]
-    public float waterDecayRate = 0.01f;
+    public float waterDecayRate = 0.1f;
 
-    private Renderer plantRenderer;
     private MeshRenderer currentRenderer;
+
+    public System.Action<float> OnGrowthSpeedChanged;
+
     private void Start()
     {
-        plantRenderer = GetComponentInChildren<Renderer>();
         UpdatePlantModel();
-        var rend = GetComponent<MeshRenderer>();
-        Material mat = rend.material;
-
-        mat.SetColor("_BaseColor", new Color(0.2f, 1f, 0.3f));
-
     }
 
     private void Update()
     {
-        Debug.Log("Timer: " + growthTimer + " | Estado: " + currentState);
-        UpdateGrowth();
+        float effectiveSpeed = growthSpeed * (1f + fertilizer / 100f * 0.25f);
+
+        UpdateGrowth(effectiveSpeed);
+        EvaporateWater(effectiveSpeed);
         UpdateColorBasedOnConditions();
         UpdatePlantStatusUI();
-        EvaporateWater();
     }
 
     private void UpdatePlantStatusUI()
     {
         if (plantStateText == null) return;
 
-        string status = "";
-
-        if (currentState == PlantState.Dead)
+        string status = currentState switch
         {
-            status = "Estado: Muerta";
-        }
-        else if (IsExtremeConditions())
-        {
-            status = "Estado: Muriendo";
-        }
-        else if (IsHealthyConditions())
-        {
-            status = "Estado: Saludable";
-        }
-        else
-        {
-            status = "Estado: Estresada";
-        }
+            PlantState.Dead => "Estado: Muerta",
+            _ when IsExtremeConditions() => "Estado: Muriendo",
+            _ when IsHealthyConditions() => "Estado: Saludable",
+            _ => "Estado: Estresada"
+        };
 
         plantStateText.text = status;
     }
-    public void ResetPlantState()
+
+    private void EvaporateWater(float effectiveSpeed)
     {
-        growthTimer = 0;
-        currentState = PlantState.Seed;
-        UpdatePlantModel();
-    }
-
-    private void EvaporateWater()
-    {
-        float fertilizerMultiplier = 1f + (fertilizer / 100f) * 0.5f;
-
-        float adjustedDecay = waterDecayRate * growthSpeed * fertilizerMultiplier;
-
-        water -= adjustedDecay * Time.deltaTime;
+        float fertilizerMultiplier = 1f + (fertilizer / 100f * 0.5f);
+        water -= waterDecayRate * effectiveSpeed * fertilizerMultiplier * Time.deltaTime;
         water = Mathf.Clamp(water, 0f, 100f);
     }
 
-
-    private void UpdateGrowth()
+    private void UpdateGrowth(float effectiveSpeed)
     {
         if (currentState == PlantState.Dead) return;
 
-        growthTimer += Time.deltaTime * growthSpeed;
-
-        if (IsHealthyConditions())
-            growthTimer += Time.deltaTime * 0.5f;
+        growthTimer += Time.deltaTime * effectiveSpeed;
 
         switch (currentState)
         {
             case PlantState.Seed:
-                if (growthTimer >= 5f) ChangeState(PlantState.Sprout);
+                if (growthTimer >= 60f) ChangeState(PlantState.Sprout);
                 break;
-
             case PlantState.Sprout:
-                if (growthTimer >= 15f) ChangeState(PlantState.Young);
+                if (growthTimer >= 180f) ChangeState(PlantState.Young);
                 break;
-
             case PlantState.Young:
-                if (growthTimer >= 30f) ChangeState(PlantState.Adult);
+                if (growthTimer >= 360f) ChangeState(PlantState.Adult);
                 break;
         }
 
         if (IsExtremeConditions())
             ChangeState(PlantState.Dead);
-
-        float fertilizerBoost = 1f + (fertilizer / 100f) * 0.25f;
-        float effectiveGrowthSpeed = growthSpeed * fertilizerBoost;
-
-        growthTimer += Time.deltaTime * effectiveGrowthSpeed;
     }
 
     private void UpdateColorBasedOnConditions()
@@ -144,41 +111,19 @@ public class PlantGrowthManager : MonoBehaviour
 
         Color targetColor = Color.white;
 
-        if (water > 50f && temperature > 18f && temperature < 30f)
-            targetColor = Color.white;
-
-        if (water < 30f)
-            targetColor = new Color(1f, 0.9f, 0.2f);
-
-        if (temperature > 35f)
-            targetColor = new Color(1f, 0.4f, 0.1f);
-
-        if (temperature < 5f)
-            targetColor = new Color(0.2f, 0.8f, 1f);
-
-        if (water <= 0f)
-            targetColor = Color.black;
+        if (water < 30f) targetColor = new Color(1f, 0.9f, 0.2f);
+        if (temperature > 35f) targetColor = new Color(1f, 0.4f, 0.1f);
+        if (temperature < 5f) targetColor = new Color(0.2f, 0.8f, 1f);
+        if (water <= 0f) targetColor = Color.black;
 
         currentRenderer.material.SetColor("_BaseColor", targetColor);
-
-        targetColor = Color.Lerp(targetColor, Color.green, fertilizer / 300f);
     }
 
-
-
-    private bool IsHealthyConditions()
-    {
-        return water >= 40f && water <= 80f && temperature >= 10f && temperature <= 30f;
-    }
-
+    private bool IsHealthyConditions() => water >= 40f && water <= 80f && temperature >= 10f && temperature <= 30f;
     private bool IsExtremeConditions()
     {
         float tolerance = fertilizer / 100f * 5f;
-
-        return water <= 0f ||
-               water >= 100f ||
-               temperature >= 50f + tolerance ||
-               temperature <= -20f - tolerance;
+        return water <= 0f || water >= 100f || temperature >= 50f + tolerance || temperature <= -20f - tolerance;
     }
 
     private void ChangeState(PlantState newState)
@@ -196,27 +141,23 @@ public class PlantGrowthManager : MonoBehaviour
 
         switch (currentState)
         {
-            case PlantState.Seed:
-                seedModel.SetActive(true);
-                currentRenderer = seedModel.GetComponentInChildren<MeshRenderer>();
-                break;
-
-            case PlantState.Sprout:
-                sproutModel.SetActive(true);
-                currentRenderer = sproutModel.GetComponentInChildren<MeshRenderer>();
-                break;
-
-            case PlantState.Young:
-                youngModel.SetActive(true);
-                currentRenderer = youngModel.GetComponentInChildren<MeshRenderer>();
-                break;
-
-            case PlantState.Adult:
-                adultModel.SetActive(true);
-                currentRenderer = adultModel.GetComponentInChildren<MeshRenderer>();
-                break;
+            case PlantState.Seed: seedModel.SetActive(true); currentRenderer = seedModel.GetComponentInChildren<MeshRenderer>(); break;
+            case PlantState.Sprout: sproutModel.SetActive(true); currentRenderer = sproutModel.GetComponentInChildren<MeshRenderer>(); break;
+            case PlantState.Young: youngModel.SetActive(true); currentRenderer = youngModel.GetComponentInChildren<MeshRenderer>(); break;
+            case PlantState.Adult: adultModel.SetActive(true); currentRenderer = adultModel.GetComponentInChildren<MeshRenderer>(); break;
         }
+    }
 
-        Debug.Log("Renderer activo: " + currentRenderer.gameObject.name);
+    public void SetGrowthSpeed(float newSpeed)
+    {
+        growthSpeed = newSpeed;
+        OnGrowthSpeedChanged?.Invoke(growthSpeed);
+    }
+
+    public void ResetPlantState()
+    {
+        growthTimer = 0f;
+        currentState = PlantState.Seed;
+        UpdatePlantModel();
     }
 }
