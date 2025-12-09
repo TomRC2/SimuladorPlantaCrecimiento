@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using TMPro;
+using UnityEngine;
 public enum PlantState
 {
     Seed,       
@@ -11,6 +12,7 @@ public class PlantGrowthManager : MonoBehaviour
 {
     [Header("Estados de la Planta")]
     public PlantState currentState = PlantState.Seed;
+    public TMP_Text plantStateText;
 
     [Header("Parámetros dinámicos")]
     [Range(0f, 100f)] public float water = 50f;
@@ -19,8 +21,8 @@ public class PlantGrowthManager : MonoBehaviour
 
     [Header("Velocidad del Tiempo")]
     public float growthSpeed = 1f;
-
     private float growthTimer = 0f;
+
 
     [Header("Referencias visuales")]
     public GameObject seedModel;
@@ -34,6 +36,9 @@ public class PlantGrowthManager : MonoBehaviour
     public Color coldColor = Color.cyan;
     public Color dryColor = new Color(0.5f, 0.3f, 0f);
     public Color deadColor = Color.black;
+
+    [Header("Consumo y Evaporación")]
+    public float waterDecayRate = 0.01f;
 
     private Renderer plantRenderer;
     private MeshRenderer currentRenderer;
@@ -53,6 +58,50 @@ public class PlantGrowthManager : MonoBehaviour
         Debug.Log("Timer: " + growthTimer + " | Estado: " + currentState);
         UpdateGrowth();
         UpdateColorBasedOnConditions();
+        UpdatePlantStatusUI();
+        EvaporateWater();
+    }
+
+    private void UpdatePlantStatusUI()
+    {
+        if (plantStateText == null) return;
+
+        string status = "";
+
+        if (currentState == PlantState.Dead)
+        {
+            status = "Estado: Muerta";
+        }
+        else if (IsExtremeConditions())
+        {
+            status = "Estado: Muriendo";
+        }
+        else if (IsHealthyConditions())
+        {
+            status = "Estado: Saludable";
+        }
+        else
+        {
+            status = "Estado: Estresada";
+        }
+
+        plantStateText.text = status;
+    }
+    public void ResetPlantState()
+    {
+        growthTimer = 0;
+        currentState = PlantState.Seed;
+        UpdatePlantModel();
+    }
+
+    private void EvaporateWater()
+    {
+        float fertilizerMultiplier = 1f + (fertilizer / 100f) * 0.5f;
+
+        float adjustedDecay = waterDecayRate * growthSpeed * fertilizerMultiplier;
+
+        water -= adjustedDecay * Time.deltaTime;
+        water = Mathf.Clamp(water, 0f, 100f);
     }
 
 
@@ -82,6 +131,11 @@ public class PlantGrowthManager : MonoBehaviour
 
         if (IsExtremeConditions())
             ChangeState(PlantState.Dead);
+
+        float fertilizerBoost = 1f + (fertilizer / 100f) * 0.25f;
+        float effectiveGrowthSpeed = growthSpeed * fertilizerBoost;
+
+        growthTimer += Time.deltaTime * effectiveGrowthSpeed;
     }
 
     private void UpdateColorBasedOnConditions()
@@ -90,10 +144,10 @@ public class PlantGrowthManager : MonoBehaviour
 
         Color targetColor = Color.white;
 
-        if (water > 0.5f && temperature > 18f && temperature < 30f)
-            targetColor = new Color(1f, 1f, 1f);
+        if (water > 50f && temperature > 18f && temperature < 30f)
+            targetColor = Color.white;
 
-        if (water < 0.3f)
+        if (water < 30f)
             targetColor = new Color(1f, 0.9f, 0.2f);
 
         if (temperature > 35f)
@@ -106,6 +160,8 @@ public class PlantGrowthManager : MonoBehaviour
             targetColor = Color.black;
 
         currentRenderer.material.SetColor("_BaseColor", targetColor);
+
+        targetColor = Color.Lerp(targetColor, Color.green, fertilizer / 300f);
     }
 
 
@@ -117,7 +173,12 @@ public class PlantGrowthManager : MonoBehaviour
 
     private bool IsExtremeConditions()
     {
-        return water <= 0f || water >= 100f || temperature >= 50f || temperature <= -20f;
+        float tolerance = fertilizer / 100f * 5f;
+
+        return water <= 0f ||
+               water >= 100f ||
+               temperature >= 50f + tolerance ||
+               temperature <= -20f - tolerance;
     }
 
     private void ChangeState(PlantState newState)
