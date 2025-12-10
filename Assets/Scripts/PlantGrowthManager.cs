@@ -153,11 +153,4 @@ public class PlantGrowthManager : MonoBehaviour
         growthSpeed = newSpeed;
         OnGrowthSpeedChanged?.Invoke(growthSpeed);
     }
-
-    public void ResetPlantState()
-    {
-        growthTimer = 0f;
-        currentState = PlantState.Seed;
-        UpdatePlantModel();
-    }
 }

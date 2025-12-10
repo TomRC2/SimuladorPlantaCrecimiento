@@ -35,23 +35,6 @@ public class UIPlantController : MonoBehaviour
         fertilizerSlider.onValueChanged.AddListener(v => plant.fertilizer = v);
         timeSlider.onValueChanged.AddListener(v => plant.growthSpeed = v);
     }
-    public void ResetPlant()
-    {
-        plant.water = 50f;
-        plant.temperature = 20f;
-        plant.fertilizer = 0f;
-        plant.growthSpeed = 1f;
-
-        waterSlider.value = 50f;
-        temperatureSlider.value = 20f;
-        fertilizerSlider.value = 0f;
-        timeSlider.value = 1f;
-
-        UpdateTexts();
-
-        plant.ResetPlantState();
-    }
-
     private void Update()
     {
         waterSlider.value = plant.water;

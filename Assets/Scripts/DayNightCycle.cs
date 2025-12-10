@@ -6,6 +6,7 @@ public class DayNightCycle : MonoBehaviour
     public float dayDuration = 60f;
     public float timeOfDay = 6f;
 
+    public int dayCount = 1;
     public Light sunLight;
     public Light nightLamp;
 
@@ -15,6 +16,7 @@ public class DayNightCycle : MonoBehaviour
 
     public PlantGrowthManager plant;
     [SerializeField] TMPro.TextMeshProUGUI clockText;
+    [SerializeField] TMPro.TextMeshProUGUI dayText;
 
     private void Start()
     {
@@ -26,11 +28,16 @@ public class DayNightCycle : MonoBehaviour
         if (plant == null) return;
 
         float effectiveSpeed = plant.growthSpeed * (1f + plant.fertilizer / 100f * 0.25f);
-
         float dayProgressSpeed = (24f / dayDuration) * effectiveSpeed;
         timeOfDay += dayProgressSpeed * Time.deltaTime;
 
-        if (timeOfDay >= 24f) timeOfDay -= 24f;
+        if (timeOfDay >= 24f)
+        {
+            timeOfDay -= 24f;
+            dayCount++;
+            if (dayText != null)
+                dayText.text = "Día " + dayCount;
+        }
 
         UpdateSunLight();
         UpdateTemperature();
