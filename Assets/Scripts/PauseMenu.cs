@@ -6,6 +6,7 @@ public class PauseMenu : MonoBehaviour
     public GameObject pauseMenu;
     public GameObject UI;
     private bool isPaused = false;
+    private bool isUI = true;
 
     private void Update()
     {
@@ -16,8 +17,9 @@ public class PauseMenu : MonoBehaviour
     public void TogglePause()
     {
         isPaused = !isPaused;
+        isUI = !isUI;
         pauseMenu.SetActive(isPaused);
-        UI.SetActive(false);
+        UI.SetActive(isUI);
         Time.timeScale = isPaused ? 0f : 1f;
     }
     public void RestartScene()

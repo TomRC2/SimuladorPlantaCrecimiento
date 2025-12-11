@@ -10,6 +10,11 @@ public class DayNightCycle : MonoBehaviour
     public Light sunLight;
     public Light nightLamp;
 
+    [Header("stats")]
+    public System.Action<int> OnDayPassed;
+    public System.Action<float> OnTemperatureChanged;
+
+
     [Header("Temperatura")]
     public float dayTemperature = 28f;
     public float nightTemperature = 10f;
@@ -35,9 +40,12 @@ public class DayNightCycle : MonoBehaviour
         {
             timeOfDay -= 24f;
             dayCount++;
-            if (dayText != null)
-                dayText.text = "Día " + dayCount;
+
+            dayText.text = "Día " + dayCount;
+
+            OnDayPassed?.Invoke(dayCount);
         }
+
 
         UpdateSunLight();
         UpdateTemperature();
@@ -75,6 +83,8 @@ public class DayNightCycle : MonoBehaviour
         float temperatureCurve = Mathf.Clamp01(Mathf.Cos((normalizedTime - 0.25f) * Mathf.PI * 2f));
 
         plant.temperature = Mathf.Lerp(nightTemperature, dayTemperature, temperatureCurve);
+
+        OnTemperatureChanged?.Invoke(plant.temperature);
     }
 
     private void UpdateNightLamp()

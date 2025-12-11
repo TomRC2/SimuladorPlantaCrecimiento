@@ -21,6 +21,14 @@ public class PlantGrowthManager : MonoBehaviour
     [Range(-20f, 50f)] public float temperature = 20f;
     [Range(0f, 100f)] public float fertilizer = 0f;
 
+    [Header("Stats")]
+    public System.Action<PlantState> OnStateChanged;
+    public System.Action<float> OnWaterChanged;
+    public System.Action<float> OnTemperatureChanged;
+    public System.Action<float> OnFertilizerChanged;
+    public System.Action OnPlantDied;
+    public System.Action OnBecameAdult;
+
     [Header("Velocidad del Tiempo")]
     public float growthSpeed = 1f;
     private float growthTimer = 0f;
@@ -58,6 +66,7 @@ public class PlantGrowthManager : MonoBehaviour
         EvaporateWater(effectiveSpeed);
         UpdateColorBasedOnConditions();
         UpdatePlantStatusUI();
+        OnFertilizerChanged?.Invoke(fertilizer);
     }
 
     private void UpdatePlantStatusUI()
@@ -80,6 +89,8 @@ public class PlantGrowthManager : MonoBehaviour
         float fertilizerMultiplier = 1f + (fertilizer / 100f * 0.5f);
         water -= waterDecayRate * effectiveSpeed * fertilizerMultiplier * Time.deltaTime;
         water = Mathf.Clamp(water, 0f, 100f);
+
+        OnWaterChanged?.Invoke(water);
     }
 
     private void UpdateGrowth(float effectiveSpeed)
@@ -130,6 +141,14 @@ public class PlantGrowthManager : MonoBehaviour
     {
         currentState = newState;
         UpdatePlantModel();
+
+        OnStateChanged?.Invoke(newState);
+
+        if (newState == PlantState.Dead)
+            OnPlantDied?.Invoke();
+
+        if (newState == PlantState.Adult)
+            OnBecameAdult?.Invoke();
     }
 
     private void UpdatePlantModel()
